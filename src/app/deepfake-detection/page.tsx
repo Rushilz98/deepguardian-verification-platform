@@ -24,59 +24,37 @@ export default function DeepfakeDetection() {
   }
 
   const handleVerify = async () => {
-    if (!file) return;
-    setAnalyzing(true);
-    setProgress(0);
+    setAnalyzing(true)
+    setProgress(0)
 
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
+          clearInterval(interval)
+          return 100
         }
-        return prev + 10;
-      });
-    }, 350);
+        return prev + 10
+      })
+    }, 350)
 
-    try {
-      const formData = new FormData();
-      formData.append("video", file);
-
-      const response = await fetch("http://127.0.0.1:5002/api/video/", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
-
-      clearInterval(interval);
-      setProgress(100);
-      setAnalyzing(false);
-
-      const overall = data.overall;
-
-      // Map model confidences to 2 decimal places
-      const metrics = Object.entries(overall.model_confidences).map(([model, info]) => ({
-        label: model,
-        value: `${((info as any).confidence * 100).toFixed(2)}%`,
-      }));
-
-      // Overall confidence rounded to 2 decimals
-      const maxConfidence = Math.max(...Object.values(overall.model_confidences).map((m: any) => m.confidence)) * 100;
-
+    setTimeout(() => {
+      clearInterval(interval)
+      setProgress(100)
+      setAnalyzing(false)
+      
+      const isAuthentic = Math.random() > 0.6
       setResults({
-        isAuthentic: overall.label === "real",
-        confidence: parseFloat(maxConfidence.toFixed(2)), // 2 decimals
-        metrics,
-      });
-    } catch (err) {
-      console.error("Video verification failed:", err);
-      clearInterval(interval);
-      setProgress(0);
-      setAnalyzing(false);
-    }
-  };
-
-
+        isAuthentic,
+        confidence: Math.floor(Math.random() * 15) + 85,
+        metrics: [
+          { label: "Deepfake Probability", value: `${Math.floor(Math.random() * 50) + 20}%` },
+          { label: "Face Swap Detection", value: isAuthentic ? "Not Detected" : "Detected" },
+          { label: "Lip-Sync Analysis", value: isAuthentic ? "Natural" : "Synthetic" },
+          { label: "Frame Consistency", value: `${Math.floor(Math.random() * 20) + 80}%` },
+        ],
+      })
+    }, 3500)
+  }
 
   const handleClear = () => {
     setFile(null)

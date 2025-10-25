@@ -26,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/image-verification", label: "Image Verification", icon: ImageIcon },
   { href: "/audio-verification", label: "Audio Verification", icon: Mic },
   { href: "/deepfake-detection", label: "Deepfake Detection", icon: Video },
