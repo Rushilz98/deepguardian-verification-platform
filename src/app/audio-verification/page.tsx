@@ -61,36 +61,53 @@ export default function AudioVerification() {
   }
 
   const handleVerify = async () => {
+    if (!file) return
     setAnalyzing(true)
     setProgress(0)
 
+    const formData = new FormData()
+    formData.append("audio", file)
+
     const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
-      })
+      setProgress((prev) => (prev < 90 ? prev + 10 : prev))
     }, 300)
 
-    setTimeout(() => {
+    try {
+      const res = await fetch("http://127.0.0.1:5002/api/audio/", {
+        method: "POST",
+        body: formData,
+      })
       clearInterval(interval)
       setProgress(100)
-      setAnalyzing(false)
-      
-      const isAuthentic = Math.random() > 0.4
+
+      if (!res.ok) throw new Error(`Server returned ${res.status}`)
+
+      const data = await res.json()
+
+      // Build metrics dynamically
+      const metrics = [
+        { label: "Label", value: data.label },
+        { label: "Confidence", value: `${(data.confidence * 100).toFixed(2)}%` },
+        { label: "Reason", value: data.reason },
+      ]
+
       setResults({
-        isAuthentic,
-        confidence: Math.floor(Math.random() * 20) + 80,
-        metrics: [
-          { label: "Voice Cloning Detection", value: `${Math.floor(Math.random() * 40) + 10}%` },
-          { label: "Audio Manipulation", value: `${Math.floor(Math.random() * 30) + 5}%` },
-          { label: "Background Noise", value: "Consistent" },
-          { label: "Frequency Analysis", value: isAuthentic ? "Natural" : "Synthetic" },
-        ],
+        isAuthentic: data.label.toLowerCase() === "real",
+        confidence: Math.round(data.confidence * 100),
+        metrics,
       })
-    }, 3000)
+    } catch (error) {
+      console.error("Audio verification error:", error)
+      setResults({
+        isAuthentic: false,
+        confidence: 0,
+        metrics: [{ label: "Error", value: "Failed to connect to backend" }],
+      })
+    } finally {
+      clearInterval(interval)
+      setAnalyzing(false)
+      setProgress(100)
+    }
   }
 
   const handleClear = () => {
@@ -156,8 +173,7 @@ export default function AudioVerification() {
                         onEnded={() => setPlaying(false)}
                         className="hidden"
                       />
-                      
-                      {/* Waveform Visualization Placeholder */}
+
                       <div className="rounded-lg bg-gradient-to-r from-blue-500/20 to-purple-500/20 p-8">
                         <div className="flex items-center justify-center gap-1">
                           {Array.from({ length: 40 }).map((_, i) => (
@@ -182,11 +198,7 @@ export default function AudioVerification() {
                             onClick={togglePlay}
                             className="shrink-0"
                           >
-                            {playing ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
+                            {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                           </Button>
                           <div className="flex-1">
                             <Slider
@@ -210,11 +222,7 @@ export default function AudioVerification() {
               />
 
               {preview && !results && (
-                <Button
-                  className="mt-4 w-full"
-                  onClick={handleVerify}
-                  disabled={analyzing}
-                >
+                <Button className="mt-4 w-full" onClick={handleVerify} disabled={analyzing}>
                   {analyzing ? "Analyzing..." : "Verify Audio"}
                 </Button>
               )}
