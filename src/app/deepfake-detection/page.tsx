@@ -42,7 +42,7 @@ export default function DeepfakeDetection() {
       const formData = new FormData();
       formData.append("video", file);
 
-      const response = await fetch("http://127.0.0.1:5002/api/video/", {
+      const response = await fetch("http://35.200.177.243:5002/api/video/", {
         method: "POST",
         body: formData,
       });

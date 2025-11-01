@@ -49,7 +49,7 @@ export default function ImageVerification() {
     }, 300)
 
     try {
-      const res = await fetch("http://127.0.0.1:5002/api/image/", {
+      const res = await fetch("http://35.200.177.243:5002/api/image/", {
         method: "POST",
         body: formData,
       })
