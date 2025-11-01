@@ -55,7 +55,7 @@ export default function TeamManagement() {
     {
       id: "1",
       name: "John Doe",
-      email: "john.doe@deepguardian.com",
+      email: "john.doe@Parallax.com",
       role: "Admin",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop",
       lastActivity: "2 hours ago",
@@ -63,7 +63,7 @@ export default function TeamManagement() {
     {
       id: "2",
       name: "Jane Smith",
-      email: "jane.smith@deepguardian.com",
+      email: "jane.smith@Parallax.com",
       role: "Analyst",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop",
       lastActivity: "5 hours ago",
@@ -71,7 +71,7 @@ export default function TeamManagement() {
     {
       id: "3",
       name: "Mike Johnson",
-      email: "mike.johnson@deepguardian.com",
+      email: "mike.johnson@Parallax.com",
       role: "Analyst",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop",
       lastActivity: "1 day ago",
@@ -158,7 +158,7 @@ export default function TeamManagement() {
               <DialogHeader>
                 <DialogTitle>Add Team Member</DialogTitle>
                 <DialogDescription>
-                  Add a new member to your DeepGuardian team.
+                  Add a new member to your Parallax team.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">

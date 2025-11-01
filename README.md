@@ -1,8 +1,8 @@
-# DeepGuardian - File Structure Documentation
+# Parallax - File Structure Documentation
 
 ## 📋 Overview
 
-DeepGuardian is a professional web application for verifying digital content authenticity. Built with Next.js 15, TypeScript, and Tailwind CSS, it provides five core verification modules with a clean, dashboard-first design.
+Parallax is a professional web application for verifying digital content authenticity. Built with Next.js 15, TypeScript, and Tailwind CSS, it provides five core verification modules with a clean, dashboard-first design.
 
 ---
 
@@ -274,7 +274,7 @@ Consider these for production readiness:
 
 ## 📄 License
 
-© 2024 DeepGuardian. All rights reserved.
+© 2024 Parallax. All rights reserved.
 
 ---
 

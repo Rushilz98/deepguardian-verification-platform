@@ -9,12 +9,21 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 
+interface MetricProps {
+  label: string
+  value: string | number
+}
+
 export default function ImageVerification() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [results, setResults] = useState<any>(null)
+  const [results, setResults] = useState<{
+    isAuthentic: boolean
+    confidence: number
+    metrics: MetricProps[]
+  } | null>(null)
   const [zoom, setZoom] = useState(1)
 
   const handleFileSelect = (selectedFile: File) => {
@@ -28,40 +37,71 @@ export default function ImageVerification() {
   }
 
   const handleVerify = async () => {
+    if (!file) return
     setAnalyzing(true)
     setProgress(0)
 
-    // Simulate analysis progress
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
-      })
+    const formData = new FormData()
+    formData.append("image", file)
+
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => (prev < 90 ? prev + 10 : prev))
     }, 300)
 
-    // Simulate API call
-    setTimeout(() => {
-      clearInterval(interval)
+    try {
+      const res = await fetch("http://127.0.0.1:5002/api/image/", {
+        method: "POST",
+        body: formData,
+      })
+
+      clearInterval(progressInterval)
       setProgress(100)
-      setAnalyzing(false)
-      
-      // Mock results
-      const isAuthentic = Math.random() > 0.5
+
+      if (!res.ok) throw new Error(`Server returned ${res.status}`)
+
+      const data = await res.json()
+      const { cnn, zeroshot } = data.image_models
+
+      // Determine authenticity using only cnn and zeroshot labels
+      const isAuthentic =
+        cnn.label.toLowerCase() === "real" && zeroshot.label.toLowerCase() === "real"
+
+      // Build metrics array
+      const metrics: MetricProps[] = [
+        { label: "CNN Label", value: cnn.label },
+        { label: "CNN Confidence", value: `${(cnn.confidence * 100).toFixed(2)}%` },
+        { label: "Zeroshot Label", value: zeroshot.label },
+        { label: "Zeroshot Confidence", value: `${(zeroshot.confidence * 100).toFixed(2)}%` },
+      ]
+
+      // Add all zeroshot classification scores
+      const scores = zeroshot.reason.classification_scores as Record<string, number>
+      for (const [label, score] of Object.entries(scores)) {
+        metrics.push({
+          label,
+          value: `${(score * 100).toFixed(2)}%`,
+        })
+      }
+
       setResults({
         isAuthentic,
-        confidence: Math.floor(Math.random() * 20) + 80,
-        metrics: [
-          { label: "AI-Generated Likelihood", value: `${Math.floor(Math.random() * 40) + 10}%` },
-          { label: "Manipulation Score", value: `${Math.floor(Math.random() * 30) + 5}%` },
-          { label: "Noise Analysis", value: "Normal" },
-          { label: "Metadata Integrity", value: isAuthentic ? "Verified" : "Modified" },
-        ],
+        confidence: Math.round(((cnn.confidence + zeroshot.confidence) / 2) * 100),
+        metrics,
       })
-    }, 3000)
+    } catch (error) {
+      console.error("Upload error:", error)
+      setResults({
+        isAuthentic: false,
+        confidence: 0,
+        metrics: [{ label: "Error", value: "Failed to connect to backend" }],
+      })
+    } finally {
+      clearInterval(progressInterval)
+      setAnalyzing(false)
+      setProgress(100)
+    }
   }
+
 
   const handleClear = () => {
     setFile(null)
@@ -72,13 +112,14 @@ export default function ImageVerification() {
   }
 
   const handleDownload = () => {
-    // Mock download
     const report = {
       file: file?.name,
       timestamp: new Date().toISOString(),
       results: results,
     }
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" })
+    const blob = new Blob([JSON.stringify(report, null, 2)], {
+      type: "application/json",
+    })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url

@@ -19,42 +19,9 @@ export default function MisinformationDetector() {
   const [progress, setProgress] = useState(0)
   const [results, setResults] = useState<any>(null)
 
-  const handleVerify = async () => {
-    const input = inputType === "text" ? textInput : urlInput
-    if (!input.trim()) return
+  const currentInput = inputType === "text" ? textInput : urlInput
 
-    setAnalyzing(true)
-    setProgress(0)
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          return 100
-        }
-        return prev + 10
-      })
-    }, 250)
-
-    setTimeout(() => {
-      clearInterval(interval)
-      setProgress(100)
-      setAnalyzing(false)
-      
-      const isAuthentic = Math.random() > 0.5
-      setResults({
-        isAuthentic,
-        confidence: Math.floor(Math.random() * 20) + 75,
-        metrics: [
-          { label: "Misinformation Score", value: `${Math.floor(Math.random() * 60) + 20}%` },
-          { label: "Source Credibility", value: isAuthentic ? "High" : "Low" },
-          { label: "Fact-Check Results", value: `${Math.floor(Math.random() * 5) + 3} sources` },
-          { label: "Bias Detection", value: isAuthentic ? "Minimal" : "Significant" },
-        ],
-      })
-    }, 2500)
-  }
-
+  // Clear input and results
   const handleClear = () => {
     setTextInput("")
     setUrlInput("")
@@ -62,9 +29,61 @@ export default function MisinformationDetector() {
     setProgress(0)
   }
 
+  // Fetch results from backend
+  const handleVerify = async () => {
+    if (!currentInput.trim()) return
+
+    setAnalyzing(true)
+    setProgress(0)
+
+    const interval = setInterval(() => {
+      setProgress((prev) => (prev >= 100 ? 100 : prev + 10))
+    }, 250)
+
+    try {
+      const response = await fetch("http://34.61.79.74:5678/webhook/miss_info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: currentInput }),
+      })
+
+      const data = await response.json()
+
+      if (data && data.length > 0) {
+        const result = data[0]
+        setResults({
+          isAuthentic: !result.verdict.toLowerCase().includes("misinformation"),
+          confidence: result.confidence,
+          metrics: [
+            { label: "Verdict", value: result.verdict },
+            { label: "Reasoning", value: result.reasoning },
+            { label: "Sources", value: result.sources.join(", ") },
+          ],
+        })
+      } else {
+        setResults({
+          isAuthentic: true,
+          confidence: 100,
+          metrics: [{ label: "Verdict", value: "No issues detected" }],
+        })
+      }
+    } catch (error) {
+      console.error(error)
+      setResults({
+        isAuthentic: false,
+        confidence: 0,
+        metrics: [{ label: "Error", value: "Failed to fetch results" }],
+      })
+    } finally {
+      clearInterval(interval)
+      setProgress(100)
+      setAnalyzing(false)
+    }
+  }
+
   const handleDownload = () => {
     const report = {
-      input: inputType === "text" ? textInput : urlInput,
+      input: currentInput,
       inputType,
       timestamp: new Date().toISOString(),
       results: results,
@@ -76,8 +95,6 @@ export default function MisinformationDetector() {
     a.download = `misinformation-check-report-${Date.now()}.json`
     a.click()
   }
-
-  const currentInput = inputType === "text" ? textInput : urlInput
 
   return (
     <AppLayout>
@@ -94,7 +111,7 @@ export default function MisinformationDetector() {
           <div className="space-y-4">
             <Card className="p-6">
               <h2 className="mb-4 text-xl font-semibold">Input Content</h2>
-              
+
               <Tabs value={inputType} onValueChange={(v) => setInputType(v as "text" | "url")}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="text">
@@ -106,7 +123,7 @@ export default function MisinformationDetector() {
                     URL
                   </TabsTrigger>
                 </TabsList>
-                
+
                 <TabsContent value="text" className="mt-4">
                   <Textarea
                     placeholder="Paste the text content you want to verify..."
@@ -116,7 +133,7 @@ export default function MisinformationDetector() {
                     className="resize-none"
                   />
                 </TabsContent>
-                
+
                 <TabsContent value="url" className="mt-4">
                   <div className="space-y-4">
                     <Input
@@ -128,11 +145,9 @@ export default function MisinformationDetector() {
                     {urlInput && (
                       <div className="rounded-lg border p-4">
                         <p className="mb-2 text-sm font-medium">URL Preview</p>
-                        <div className="rounded bg-muted p-4">
+                        <div className="rounded bg-muted p-4 break-all">
                           <LinkIcon className="h-8 w-8 text-muted-foreground" />
-                          <p className="mt-2 text-sm text-muted-foreground break-all">
-                            {urlInput}
-                          </p>
+                          <p className="mt-2 text-sm text-muted-foreground">{urlInput}</p>
                         </div>
                       </div>
                     )}
@@ -142,11 +157,7 @@ export default function MisinformationDetector() {
 
               {currentInput && !results && (
                 <div className="mt-4 flex gap-2">
-                  <Button
-                    className="flex-1"
-                    onClick={handleVerify}
-                    disabled={analyzing}
-                  >
+                  <Button className="flex-1" onClick={handleVerify} disabled={analyzing}>
                     {analyzing ? "Checking..." : "Check Content"}
                   </Button>
                   <Button variant="outline" onClick={handleClear}>

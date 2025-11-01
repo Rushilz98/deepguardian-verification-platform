@@ -28,10 +28,10 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/image-verification", label: "Image Verification", icon: ImageIcon },
-  { href: "/audio-verification", label: "Audio Verification", icon: Mic },
-  { href: "/deepfake-detection", label: "Deepfake Detection", icon: Video },
   { href: "/misinformation-detector", label: "Misinformation Detector", icon: Shield },
+  { href: "/deepfake-detection", label: "Deepfake Detection", icon: Video },
+  { href: "/audio-verification", label: "Audio Verification", icon: Mic },
+  { href: "/image-verification", label: "Image Verification", icon: ImageIcon },
   { href: "/team-management", label: "Team Management", icon: Users },
 ];
 
@@ -57,7 +57,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">DeepGuardian</h1>
+              <h1 className="text-lg font-bold text-white">Parallax</h1>
               <p className="text-xs text-gray-400">AI Verification</p>
             </div>
           </div>
@@ -88,7 +88,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Footer */}
           <div className="border-t p-4" style={{ borderColor: "#1E293B" }}>
-            <p className="text-xs text-gray-400 text-center">© 2024 DeepGuardian</p>
+            <p className="text-xs text-gray-400 text-center">© 2025 Parallax</p>
           </div>
         </div>
       </aside>
