@@ -73,7 +73,7 @@ export default function AudioVerification() {
     }, 300)
 
     try {
-      const res = await fetch("http://35.200.177.243:5002/api/audio/", {
+      const res = await fetch("http://34.93.92.249:5002/api/audio/", {
         method: "POST",
         body: formData,
       })

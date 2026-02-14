@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Shield, Link as LinkIcon, Type } from "lucide-react"
 import AppLayout from "@/components/AppLayout"
-import VerificationResults from "@/components/VerificationResults"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -21,7 +20,6 @@ export default function MisinformationDetector() {
 
   const currentInput = inputType === "text" ? textInput : urlInput
 
-  // Clear input and results
   const handleClear = () => {
     setTextInput("")
     setUrlInput("")
@@ -29,7 +27,6 @@ export default function MisinformationDetector() {
     setProgress(0)
   }
 
-  // Fetch results from backend
   const handleVerify = async () => {
     if (!currentInput.trim()) return
 
@@ -41,7 +38,7 @@ export default function MisinformationDetector() {
     }, 250)
 
     try {
-      const response = await fetch("http://34.61.79.74:5678/webhook/miss_info", {
+      const response = await fetch("http://104.197.87.77:5678/webhook/miss_info", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: currentInput }),
@@ -51,13 +48,25 @@ export default function MisinformationDetector() {
 
       if (data && data.length > 0) {
         const result = data[0]
+
+        // Format sources as clickable domains
+        const formattedSources =
+          result.sources?.map((src: string) => {
+            try {
+              const domain = new URL(src).hostname.replace("www.", "")
+              return `<a href="${src}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${domain}</a>`
+            } catch {
+              return `<a href="${src}" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">${src}</a>`
+            }
+          }) || []
+
         setResults({
           isAuthentic: !result.verdict.toLowerCase().includes("misinformation"),
           confidence: result.confidence,
           metrics: [
             { label: "Verdict", value: result.verdict },
             { label: "Reasoning", value: result.reasoning },
-            { label: "Sources", value: result.sources.join(", ") },
+            { label: "Sources", value: formattedSources },
           ],
         })
       } else {
@@ -86,7 +95,7 @@ export default function MisinformationDetector() {
       input: currentInput,
       inputType,
       timestamp: new Date().toISOString(),
-      results: results,
+      results,
     }
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -181,26 +190,11 @@ export default function MisinformationDetector() {
             <Card className="p-6">
               <h3 className="mb-3 font-semibold">What we check:</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 text-primary">•</span>
-                  <span>Cross-reference with fact-checking databases</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 text-primary">•</span>
-                  <span>Source credibility and authority assessment</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 text-primary">•</span>
-                  <span>Bias and sentiment analysis</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 text-primary">•</span>
-                  <span>Claim verification against trusted sources</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 text-primary">•</span>
-                  <span>Language patterns and manipulation detection</span>
-                </li>
+                <li>• Cross-reference with fact-checking databases</li>
+                <li>• Source credibility and authority assessment</li>
+                <li>• Bias and sentiment analysis</li>
+                <li>• Claim verification against trusted sources</li>
+                <li>• Language patterns and manipulation detection</li>
               </ul>
             </Card>
           </div>
@@ -208,7 +202,39 @@ export default function MisinformationDetector() {
           {/* Results Section */}
           <div>
             {results ? (
-              <VerificationResults {...results} onDownload={handleDownload} />
+              <Card className="p-6 space-y-4">
+                <h3 className="text-xl font-bold mb-4">Results</h3>
+
+                {/* ✅ Confidence Progress Bar */}
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="font-medium">Confidence Score</span>
+                    <span className="font-semibold">{results.confidence}%</span>
+                  </div>
+                  <Progress value={results.confidence} className="h-2" />
+                </div>
+
+                {/* Metrics */}
+                {results.metrics.map((m: any, i: number) => (
+                  <div key={i} className="mb-3">
+                    <p className="text-sm font-medium text-muted-foreground">{m.label}</p>
+                    {m.label === "Sources" ? (
+                      <div
+                        className="mt-1 text-sm space-x-2"
+                        dangerouslySetInnerHTML={{
+                          __html: (Array.isArray(m.value) ? m.value.join(", ") : m.value) || "",
+                        }}
+                      />
+                    ) : (
+                      <p className="mt-1 text-lg font-semibold">{m.value}</p>
+                    )}
+                  </div>
+                ))}
+
+                <div className="pt-2">
+                  <Button onClick={handleDownload}>Download Report</Button>
+                </div>
+              </Card>
             ) : (
               <Card className="flex h-full min-h-[400px] flex-col items-center justify-center p-12 text-center">
                 <div className="rounded-full bg-muted p-6">

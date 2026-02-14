@@ -1,82 +1,162 @@
 "use client"
 
 import { useState } from "react"
-import { Video } from "lucide-react"
+import { Video, CheckCircle, AlertTriangle, Download, ExternalLink } from "lucide-react"
 import AppLayout from "@/components/AppLayout"
 import FileUpload from "@/components/FileUpload"
-import VerificationResults from "@/components/VerificationResults"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+
+interface MetricProps {
+  model: string
+  label: string
+  confidence: string
+  reason?: string
+}
 
 export default function DeepfakeDetection() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [results, setResults] = useState<any>(null)
+  const [results, setResults] = useState<{
+    isAuthentic: boolean
+    confidence: number
+    metrics: MetricProps[]
+  } | null>(null)
 
+  // === Internal Verification Results Component ===
+  const VerificationResultsInternal = ({
+    isAuthentic,
+    confidence,
+    metrics,
+    onDownload,
+  }: {
+    isAuthentic: boolean
+    confidence: number
+    metrics: MetricProps[]
+    onDownload: () => void
+  }) => {
+    return (
+      <Card className="p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          {isAuthentic ? (
+            <CheckCircle className="h-8 w-8 text-green-500" />
+          ) : (
+            <AlertTriangle className="h-8 w-8 text-red-500" />
+          )}
+          <div>
+            <h3 className="text-xl font-bold">
+              {isAuthentic ? "Authentic Content" : "Suspicious Content Detected"}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Analysis completed with {confidence}% confidence
+            </p>
+          </div>
+        </div>
+
+        {/* Confidence */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium">Confidence Score</span>
+            <span className="text-sm font-bold">{confidence}%</span>
+          </div>
+          <Progress value={confidence} className="h-2" />
+        </div>
+
+        {/* Metrics */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {metrics.map((metric, idx) => (
+            <div key={idx} className="rounded-lg border p-4">
+              <p className="text-sm font-medium text-muted-foreground">
+                {metric.model} - {metric.label}
+              </p>
+              <p className="mt-1 text-lg font-bold">{metric.confidence}</p>
+              {metric.reason && (
+                <p className="mt-1 text-xs text-muted-foreground">Reason: {metric.reason}</p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <Button onClick={onDownload} className="gap-2">
+            <Download className="h-4 w-4" />
+            Download Report
+          </Button>
+        </div>
+      </Card>
+    )
+  }
+
+  // === Handlers ===
   const handleFileSelect = (selectedFile: File) => {
     setFile(selectedFile)
     setResults(null)
-    const url = URL.createObjectURL(selectedFile)
-    setPreview(url)
+    setPreview(URL.createObjectURL(selectedFile))
   }
 
   const handleVerify = async () => {
-    if (!file) return;
-    setAnalyzing(true);
-    setProgress(0);
+    if (!file) return
+    setAnalyzing(true)
+    setProgress(0)
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 350);
+        if (prev >= 90) return prev
+        return prev + 5
+      })
+    }, 300)
 
     try {
-      const formData = new FormData();
-      formData.append("video", file);
+      const formData = new FormData()
+      formData.append("video", file)
 
-      const response = await fetch("http://35.200.177.243:5002/api/video/", {
+      const response = await fetch("http://34.93.92.249:5002/api/video/", {
         method: "POST",
         body: formData,
-      });
-      const data = await response.json();
+      })
+      const data = await response.json()
 
-      clearInterval(interval);
-      setProgress(100);
-      setAnalyzing(false);
+      clearInterval(interval)
+      setProgress(100)
+      setAnalyzing(false)
 
-      const overall = data.overall;
+      const overall = data.overall
 
-      // Map model confidences to 2 decimal places
-      const metrics = Object.entries(overall.model_confidences).map(([model, info]) => ({
-        label: model,
-        value: `${((info as any).confidence * 100).toFixed(2)}%`,
-      }));
+      const metrics: MetricProps[] = Object.entries(overall.model_confidences).map(
+        ([model, info]) => ({
+          model,
+          confidence: ((info as any).confidence * 100).toFixed(2) + "%",
+          label: (info as any).label,
+          reason: (info as any).reason,
+        })
+      )
 
-      // Overall confidence rounded to 2 decimals
-      const maxConfidence = Math.max(...Object.values(overall.model_confidences).map((m: any) => m.confidence)) * 100;
+      const maxConfidence = Math.max(
+        ...Object.values(overall.model_confidences).map((m: any) => m.confidence)
+      ) * 100
 
       setResults({
         isAuthentic: overall.label === "real",
-        confidence: parseFloat(maxConfidence.toFixed(2)), // 2 decimals
+        confidence: parseFloat(maxConfidence.toFixed(2)),
         metrics,
-      });
+      })
     } catch (err) {
-      console.error("Video verification failed:", err);
-      clearInterval(interval);
-      setProgress(0);
-      setAnalyzing(false);
+      console.error("Video verification failed:", err)
+      clearInterval(interval)
+      setProgress(0)
+      setAnalyzing(false)
+      setResults({
+        isAuthentic: false,
+        confidence: 0,
+        metrics: [{ model: "Error", label: "Failed", confidence: "0%", reason: "Could not connect to backend" }],
+      })
     }
-  };
-
-
+  }
 
   const handleClear = () => {
     setFile(null)
@@ -89,7 +169,7 @@ export default function DeepfakeDetection() {
     const report = {
       file: file?.name,
       timestamp: new Date().toISOString(),
-      results: results,
+      results,
     }
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" })
     const url = URL.createObjectURL(blob)
@@ -125,9 +205,7 @@ export default function DeepfakeDetection() {
                         controls
                         className="w-full rounded-lg"
                         style={{ maxHeight: "400px" }}
-                      >
-                        Your browser does not support the video tag.
-                      </video>
+                      />
                       <p className="text-sm text-muted-foreground">{file?.name}</p>
                     </div>
                   ) : undefined
@@ -135,6 +213,7 @@ export default function DeepfakeDetection() {
                 onClear={handleClear}
               />
 
+              {/* Verify / Loading */}
               {preview && !results && (
                 <Button
                   className="mt-4 w-full"
@@ -187,7 +266,12 @@ export default function DeepfakeDetection() {
           {/* Results Section */}
           <div>
             {results ? (
-              <VerificationResults {...results} onDownload={handleDownload} />
+              <VerificationResultsInternal
+                isAuthentic={results.isAuthentic}
+                confidence={results.confidence}
+                metrics={results.metrics}
+                onDownload={handleDownload}
+              />
             ) : (
               <Card className="flex h-full min-h-[400px] flex-col items-center justify-center p-12 text-center">
                 <div className="rounded-full bg-muted p-6">
